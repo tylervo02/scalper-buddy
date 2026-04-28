@@ -4,7 +4,6 @@ from PIL import Image
 import io
 import tensorflow as tf
 from tensorflow import keras
-import uvicorn
 
 router = APIRouter()
 model = keras.models.load_model("./fakeCardCNN.keras") #figure out where I put .keras file
@@ -12,6 +11,11 @@ classNames = [
     "real",
     "fake"
 ]
+
+@router.get("/")
+def root():
+    return {"status": "API is running"}
+
 
 @router.post("/predict", summary = "Predict Card Class")
 # I will need to figure out if it is even a valid card to be processed in the first place. Right now, that functionality isn't really supported.
@@ -29,7 +33,4 @@ async def predictCard(file: UploadFile = File(...)):
     
     #preprocess the image 
     inputToTensor = tf.cast(tf.image.resize(image, (224, 224)), tf.float32) / 255.0
-    return JSONResponse({"predicted_class": classNames[model.predict(inputToTensor)]})
-
-if __name__ == "__main__":
-    uvicorn.run(router, host="127.0.0.1", port=8080)
+    return JSONResponse({"predicted_class": classNames[int(tf.argmax(model.predict(inputToTensor)[0]))]})
